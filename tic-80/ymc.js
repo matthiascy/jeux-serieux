@@ -31,7 +31,7 @@ function OVR() {
 
 
 /*
- *
+ * Enums
  */
 var Dir = {"Up": 0, "Down": 1, "Left": 2, "Right": 3, "CW": 4, "CCW": 5};
 Object.freeze(Dir);
@@ -41,6 +41,13 @@ Object.freeze(Btn);
 
 var ScrSz = {"w": 240, "h": 136};
 Object.freeze(ScrSz);
+
+/*
+ * Timer
+ */
+function Timer() {
+    // TODO: complete
+}
 
 function Game() {
     this.score = 0;
@@ -130,28 +137,6 @@ Object.assign(Game.prototype, {
     }
 });
 
-function Drawable(pos, o, visible, layer, depth) {
-    this.pos = pos;  // current position
-    this.o = o;      // origin
-    this.visible = visible;
-    this.layer = layer;
-    this.depth = depth;
-}
-
-Object.assign(Drawable.prototype, {
-    init: function() {
-        // TODO: implemetation
-    },
-
-    draw: function() {
-        // TODO: implemetation
-    },
-
-    destroy: function() {
-        // TODO: implementation
-    }
-});
-
 /*
  * Star
  */
@@ -162,12 +147,12 @@ function Star(paralax) {
 /*
  * Planet
  */
-function Planet(pos, o, visible, layer, depth, density, radius, gravRadius, mass) {
+function Planet(pos, o, visible, layer, depth, density, radius, gravRadius) {
     Drawable.call(this, pos, o, visible, layer, depth);
     this.density = density;
     this.radius = radius;
     this.gravRadius = gravRadius;
-    this.mass = mass;
+    this.mass = Utils.sphereMass(radius, density);
 }
 
 /*
@@ -261,6 +246,35 @@ Object.assign(Satellite.prototype, {
 });
 
 /*
+ * Line
+ */
+function Line() {
+    
+}
+
+function Drawable(pos, o, visible, layer, depth) {
+    this.pos = pos ;  // current position
+    this.o = o;      // origin
+    this.visible = visible;
+    this.layer = layer;
+    this.depth = depth;
+}
+
+Object.assign(Drawable.prototype, {
+    init: function() {
+        // TODO: implemetation
+    },
+
+    draw: function() {
+        // TODO: implemetation
+    },
+
+    destroy: function() {
+        // TODO: implementation
+    }
+});
+
+/*
  * Renderer
  */
 function Renderer(color, layers) {
@@ -286,6 +300,33 @@ Object.assign(Renderer.prototype, {
         // TODO
     },
 });
+
+/*
+ * Group
+ */
+function Group(name, world) {
+    Array.call(this, name);
+    this.name = name;
+    this.world = world;
+}
+
+Group.prototype = Object.create(Array.prototype);
+Group.prototype.constructor = Group;
+
+Object.assign(Group.prototype, {
+    has: function(entity) {
+        // TODO
+    }
+});
+
+/*
+ * CircleBoundingBox
+ */
+function CircBBox(entity, pos, radius) {
+    this.entity = entity;
+    this.pos = entity.pos;
+    this.radius = radius;
+}
 
 /*
  * Vector
@@ -485,11 +526,6 @@ function Text(text, pos, scale, color) {
 Text.prototype.draw = function() {
     print(this.text, this.pos.x, this.pos.y, this.color, false, this.scale);
 };
-
-/*
- * Line
- */
-function Line() {};
 
 /*
  * Camera
@@ -700,3 +736,40 @@ Object.assign(System.prototype, {
         // TODO:
     },
 });
+
+/*
+ * Utils
+ */
+function Utils() { }
+
+Utils.clamp = function(val, a, b) {
+    // val < a ? a : (val > b ? b : val);
+    return Math.min(Math.max(val, a), b);
+}
+
+Utils.lerp = function(val, target, t) {
+    t = Utils.clamp(t, 0, 1);
+    return (val + t * (target - val));
+};
+
+Utils.mod = function(a, b) {
+    var r = a % b;
+    return r < 0 ? r + b : r;
+};
+
+Utils.distance = function(a, b) {
+    var x = a.x - b.x;
+    var y = a.y - b.y;
+    return Math.sqrt(x * x + y * y);
+}
+
+Utils.sphereMass = function(radius, density) {
+    return 4.0 / 3.0 * Math.PI * Math.pow(radius, 3) * density;
+}
+
+Utils.listRemove = function(lst, val) {
+    var index = lst.indexOf(val);
+    if (index > -1) {
+        lst.splice(index, 1);
+    }
+}
