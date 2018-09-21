@@ -153,6 +153,13 @@ function Planet(pos, o, visible, layer, depth, density, radius, gravRadius) {
     this.radius = radius;
     this.gravRadius = gravRadius;
     this.mass = Utils.sphereMass(radius, density);
+    this.gravColor = 1;
+    this.color = 2;
+}
+
+Planet.prototype.draw = function() {
+    circb(this.pos.x, this.pos.y, this.gravRadius, this.gravColor);
+    circ(this.pos.x, this.pos.y, this.radius, this.color);
 }
 
 /*
@@ -249,7 +256,11 @@ Object.assign(Satellite.prototype, {
  * Line
  */
 function Line() {
-    
+    Drawable.call(this);
+}
+
+Line.prototype.draw = function() {
+    // TODO
 }
 
 function Drawable(pos, o, visible, layer, depth) {
