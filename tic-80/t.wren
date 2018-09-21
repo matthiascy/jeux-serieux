@@ -2436,60 +2436,7 @@ class EntityCreator {
 	
 }
 
-class FSM {
-
-	current { _current }
-	states { _states }
-	
-	construct new() {
-		_states = {}
-	}
-
-	add(s) { 
-		if (_states.containsKey(s.name)) {
-			Fiber.abort("state with name: %(s.name) already exists")
-		}
-		_states[s.name] = s
-		s.init()
-	}
-
-	remove(n) { 
-		var s = _states[n]
-		if (s != null) {
-			if (_current == s) {
-				_current.onleave(null)
-				_current = null
-			}
-			_states.remove(n)
-		}
-	}
-
-	set(n) {set(n,null,null)}
-	set(n,ed) {set(n,ed,null)}
-	set(n,ed,ld) { 
-		var s = _states[n]
-		if (s != null) {
-			if (_current != null) {
-				_current.onleave(ld)
-			}
-			s.onenter(ed)
-			_current = s
-		}
-	}
-
-	update(dt){
-		if (_current != null) {
-			_current.update(dt)
-		}
-	}
-
-	draw() { 
-		if (_current != null) {
-			_current.draw()
-		}
-	}
 
-}
 
 
 
@@ -2552,23 +2499,6 @@ class PlayState is State {
 	}
 
 
-}
-
-class Settings {
-
-	static camera_limit { 40 }
-	static comet_dist { 48 }
-	static comet_rest { 0.5 }
-
-	static ice_force { 8 }
-	static sun_hittime { 3 }
-
-	static pl_force { 4 }
-	static pl_factor { 1.5 }
-
-	static bh_force { 8 }
-	static bh_revforce { 10 }
-	
 }
 
 // game

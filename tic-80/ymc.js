@@ -1,5 +1,62 @@
 // script: js
 
+/**
+ * Utils
+ */
+function Utils() { }
+
+Utils.clamp = function(val, a, b) {
+    // val < a ? a : (val > b ? b : val);
+    return Math.min(Math.max(val, a), b);
+};
+
+Utils.lerp = function(val, target, t) {
+    t = Utils.clamp(t, 0, 1);
+    return (val + t * (target - val));
+};
+
+Utils.mod = function(a, b) {
+    var r = a % b;
+    return r < 0 ? r + b : r;
+};
+
+Utils.distance = function(a, b) {
+    var x = a.x - b.x;
+    var y = a.y - b.y;
+    return Math.sqrt(x * x + y * y);
+};
+
+Utils.sphereMass = function(radius, density) {
+    return 4.0 / 3.0 * Math.PI * Math.pow(radius, 3) * density;
+};
+
+Utils.listRemove = function(lst, val) {
+    var index = lst.indexOf(val);
+    if (index > -1) {
+        lst.splice(index, 1);
+    }
+};
+
+// TODO: test
+Utils.listHas = function(lst, key, val) {
+    for (var e in lst) {
+        if (e[key] === val) {
+            return true;
+        }
+    }
+
+    return false;
+};
+
+/**
+ * Game settings: music, visibility, difficulty
+ */
+function Settings() { }
+Settings.cameraLimit = 40;
+Settings.propulseForce = 4;
+Settings.volume = 3;
+Settings.difficulty = 1;
+
 var world = new World();
 
 var game = new Game();
@@ -36,8 +93,8 @@ function OVR() {
 var Dir = {"Up": 0, "Down": 1, "Left": 2, "Right": 3, "CW": 4, "CCW": 5};
 Object.freeze(Dir);
 
-var Btn = {"Up": 58, "Down": 59, "Left": 60, "Right": 61, "A": 1, "Z": 26};
-Object.freeze(Btn);
+var Key = {"Up": 58, "Down": 59, "Left": 60, "Right": 61, "A": 1, "Z": 26, "Enter": 50};
+Object.freeze(Key);
 
 var ScrSz = {"w": 240, "h": 136};
 Object.freeze(ScrSz);
@@ -50,7 +107,6 @@ function Timer() {
 }
 
 function Game() {
-    this.score = 0;
     this.bt = [
         // sprite-id-unpressed name position sprite-id-pressed keymapid not-available
         [0,  "U", [ 8,  0], 16,  0, 32],
@@ -61,6 +117,37 @@ function Game() {
         [5,  "Z", [ 0, 14], 21, 26, 37],
     ];
     this.satellite = new Satellite(0, 0, new Vec2(50, 50), 0, 5.0);
+    this.planet = new Planet(new Vec2(80, 80), new Vec2(0, 0), true, 0, 0, 1, 10, 20);
+    //this.dt;
+    this.volume = 2;
+    this.score = 0;
+    this.gravity = 1;
+
+    this.fsm = new FSM();
+    this.fsm.add(new GameOverState());
+    this.fsm.add(new MenuState());
+    this.fsm.add(new PlayState());
+    this.fsm.switchTo("menu");
+
+    this.timer = new Timer();
+    this.timer.init();
+
+    this.camera = new Camera();
+    this.camera.init();
+
+    this.renderer = new Renderer();
+    this.renderer.createLayer(0); // background
+    this.renderer.createLayer(1); // stars
+    this.renderer.createLayer(2); // planets
+    this.renderer.createLayer(3); // satellite
+    this.renderer.createLayer(4); // foreground
+    this.renderer.init();
+
+    this.world = new World();
+    this.world.groups.create("planets");
+    this.world.groups.create("satellite");
+    this.world.groups.create("bbox");
+    this.world.groups.create("stars");
 }
 
 Object.assign(Game.prototype, {
@@ -108,32 +195,47 @@ Object.assign(Game.prototype, {
         print("Score: " + score, x, y, 15, scale=0.5, smallfont=true);
     },
 
-    run: function() {
-        if (key(Btn.Up)) {
+    incScore: function(val) {
+        this.score += v;
+    },
+
+    decScore: function(val) {
+        this.score -= v;
+    },
+
+    keyinput: function() {
+        if (key(Key.Up)) {
             this.satellite.propulse(Dir.Up);
         }
 
-        if (key(Btn.Down)) {
+        if (key(Key.Down)) {
             this.satellite.propulse(Dir.Down);
         }
 
-        if (key(Btn.Left)) {
+        if (key(Key.Left)) {
             this.satellite.propulse(Dir.Left);
         }
 
-        if (key(Btn.Right)) {
+        if (key(Key.Right)) {
             this.satellite.propulse(Dir.Right);
         }
 
-        if (keyp(Btn.A)) {
+        if (keyp(Key.A)) {
             this.satellite.spin(Dir.CW);
         }
 
-        if (keyp(Btn.Z)) {
+        if (keyp(Key.Z)) {
             this.satellite.spin(Dir.CCW);
         }
+    },
 
+    update: function() {
+        this.keyinput();
+        this.timer.update();
+        this.fsm.draw();
+        this.space.draw();
         this.satellite.draw();
+        this.planet.draw();
     }
 });
 
@@ -160,7 +262,7 @@ function Planet(pos, o, visible, layer, depth, density, radius, gravRadius) {
 Planet.prototype.draw = function() {
     circb(this.pos.x, this.pos.y, this.gravRadius, this.gravColor);
     circ(this.pos.x, this.pos.y, this.radius, this.color);
-}
+};
 
 /*
  * Satellite
@@ -261,6 +363,20 @@ function Line() {
 
 Line.prototype.draw = function() {
     // TODO
+};
+
+/*
+ * Circle
+ */
+function Circle(r, p) {
+    Drawable(this);
+    this.radius = r;
+    this.pos    = p;
+    this.color = 2;
+}
+
+Circle.prototype.draw = function() {
+    circ(this.pos.x - this.o.x, this.pos.y - this.o.y, this.radius, this.color);
 }
 
 function Drawable(pos, o, visible, layer, depth) {
@@ -481,14 +597,6 @@ Object.assign(Vec2.prototype, {
 });
 
 /*
- * Circle
- */
-function Circle(r, p) {
-    this.radius = r;
-    this.pos    = p;
-}
-
-/*
  * Rectangle
  */
 function Rect(w, h, p) {
@@ -562,57 +670,6 @@ Object.assign(Camera.prototype, {
 /*
  * ParticleEmmiter
  */
-
-/*
- * State Machine
- */
-function State(name) {
-    this.name = name;
-}
-
-Object.assign(State.prototype, {
-    init: function() { },
-    onEnter: function(d) { },
-    onLeave: function(d) { },
-    update: function(dt) { },
-    draw: function() { }
-});
-
-function MenuState() {
-    State.call(this, "menu");
-    this.x = 120;
-}
-
-MenuState.prototype = Object.create(State.prototype);
-MenuState.prototype.constructor = MenuState;
-MenuState.prototype.onEnter = function(d) {
-    this.selection = 0;
-    this.title = new Text("SATELLITE", new Vec2(20, 30), 4, 2);
-    this.playTxt = new Text("Play", new Vec2(this.x, 60), 1, 1);
-    this.difficultyTxt = new Text("Difficulty", new Vec2(this.x, 70), 1, 1);
-    this.visibilityTxt = new Text("Visibility", new Vec2(this.x, 80), 1, 1);
-    this.musicTxt = new Text("Music", new Vec2(this.x, 90), 1, 1);
-    this.exitTxt = new Text("Exit", new Vec2(this.x, 100), 1, 1);
-};
-
-// TODO: onEnter, onLeave, update
-
-function GameOverState() {
-    State.call(this, "gameover");
-}
-
-GameOverState.prototype = Object.create(State.prototype);
-GameOverState.prototype.constructor = GameOverState;
-
-// TODO: onEnter, onLeave, update
-
-function PlayState() {
-    State.call(this, "play");
-}
-
-PlayState.prototype = Object.create(State.prototype);
-PlayState.prototype.constructor = PlayState;
-// TODO: onEnter, onLeave, update
 
 /*
  * Entity-Components-System
@@ -748,39 +805,145 @@ Object.assign(System.prototype, {
     },
 });
 
-/*
- * Utils
+/**
+ * Finite-State-Machine
  */
-function Utils() { }
-
-Utils.clamp = function(val, a, b) {
-    // val < a ? a : (val > b ? b : val);
-    return Math.min(Math.max(val, a), b);
+function State(name) {
+    this.name = name;
 }
 
-Utils.lerp = function(val, target, t) {
-    t = Utils.clamp(t, 0, 1);
-    return (val + t * (target - val));
+Object.assign(State.prototype, {
+    init: function() { },
+    onEnter: function(d) { },
+    onExit: function(d) { },
+    update: function(dt) { },
+    draw: function() { }
+});
+
+function MenuState() {
+    State.call(this, "menu");
+}
+
+MenuState.prototype = Object.create(State.prototype);
+
+MenuState.prototype.constructor = MenuState;
+
+MenuState.prototype.init = function() { };
+
+MenuState.prototype.onEnter = function(d) {
+    this.selection = 0;
+    this.title = new Text("SATELLITE", new Vec2(20, 30), 4, 2);
+    this.playTxt = new Text("Play", new Vec2(this.x, 60), 1, 1);
+    this.difficultyTxt = new Text("Difficulty", new Vec2(this.x, 70), 1, 1);
+    this.visibilityTxt = new Text("Visibility", new Vec2(this.x, 80), 1, 1);
+    this.musicTxt = new Text("Music", new Vec2(this.x, 90), 1, 1);
+    this.exitTxt = new Text("Exit", new Vec2(this.x, 100), 1, 1);
 };
 
-Utils.mod = function(a, b) {
-    var r = a % b;
-    return r < 0 ? r + b : r;
-};
+MenuState.prototype.onExit = function() {};
 
-Utils.distance = function(a, b) {
-    var x = a.x - b.x;
-    var y = a.y - b.y;
-    return Math.sqrt(x * x + y * y);
-}
-
-Utils.sphereMass = function(radius, density) {
-    return 4.0 / 3.0 * Math.PI * Math.pow(radius, 3) * density;
-}
-
-Utils.listRemove = function(lst, val) {
-    var index = lst.indexOf(val);
-    if (index > -1) {
-        lst.splice(index, 1);
+MenuState.prototype.update = function(dt) {
+    if (keyp(Key.Enter)) {
+        switch (this.selection) {
+        case 0:
+            // enter play
+            break;
+        case 1:
+            // difficulty
+            break;
+        case 2:
+            // visibility
+            break;
+        case 3:
+            // music
+            break;
+        case 4:
+            exit();
+            break;
+        default:
+            break;
+        }
     }
+
+    if (keyp(Key.Up)) {
+        this.selection = Utils.mod(this.selection - 1, 5);
+    } else if (keyp(Key.Down)) {
+        this.selection = Utils.mod(this.selection + 1, 5);
+    }
+};
+
+MenuState.prototype.draw = function() {
+};
+
+// TODO: onEnter, onExit, update
+
+function GameOverState() {
+    State.call(this, "gameover");
 }
+
+GameOverState.prototype = Object.create(State.prototype);
+GameOverState.prototype.constructor = GameOverState;
+
+// TODO: onEnter, onExit, update
+
+function PlayState() {
+    State.call(this, "play");
+}
+
+PlayState.prototype = Object.create(State.prototype);
+PlayState.prototype.constructor = PlayState;
+// TODO: onEnter, onExit, update
+function FSM() {
+    this.current = null;
+    this.states = [];
+}
+
+Object.assign(FSM.prototype, {
+    add: function(state) {
+        if (this.states.has(state.name)) {
+
+            trace("State with name: " + state.name + " already exists!");
+
+        } else {
+
+            this.states[state.name] = state;
+            state.init();
+
+        }
+    },
+
+    remove: function(name) {
+        var s = this.states[name];
+        if (s != null) {
+            if (this.current === s) {
+                this.current.onExit(null);
+                this.current = null;
+            }
+            this.states.delete(name);
+        }
+    },
+
+    switchTo: function(name) {
+        // amelioration
+        var s = this.states[name];
+        if (s !== null) {
+            if (this.current !== null) {
+                this.current.onExit();
+            }
+            s.onEnter();
+            this.current = s;
+        }
+    },
+
+    update: function(dt) {
+        if (this.current !== null) {
+            this.current.update(dt);
+        }
+    },
+
+    draw: function() {
+        if (this.current !== null) {
+            this.current.draw();
+        }
+    }
+});
