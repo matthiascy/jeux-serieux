@@ -37,15 +37,24 @@ Utils.listRemove = function(lst, val) {
     }
 };
 
-// TODO: test
 Utils.listHas = function(lst, key, val) {
-    for (var e in lst) {
-        if (e[key] === val) {
+    for (var i = 0; i < lst.length; ++i) {
+        if (lst[i][key] == val) {
             return true;
         }
     }
 
     return false;
+};
+
+Utils.listFind = function(lst, key, val) {
+    for (var i = 0; i < lst.length; ++i) {
+        if (lst[i][key] == val) {
+            return lst[i];
+        }
+    }
+
+    return null;
 };
 
 /**
@@ -56,36 +65,6 @@ Settings.cameraLimit = 40;
 Settings.propulseForce = 4;
 Settings.volume = 3;
 Settings.difficulty = 1;
-
-var world = new World();
-
-var game = new Game();
-
-function TIC() {
-    cls(0);
-    game.run();
-}
-
-var title = new Text("SATELLITE", new Vec2(20, 30), 4, 2);
-var play = new Text("Play", new Vec2(120, 60), 1, 1);
-var difficulty = new Text("Difficulty", new Vec2(120, 70), 1, 1);
-var visibility = new Text("Visibility", new Vec2(120, 80), 1, 1);
-var music = new Text("Music", new Vec2(120, 90), 1, 1);
-
-function OVR() {
-    /*
-    game.showHud();
-
-    circb(50 + 40 * Math.sin(time()/1000), 50 + 40 * Math.cos(time()/1000), 20, 4);
-    spr(22, 47 + 40 * Math.sin(time()/1000), 48 + 40 * Math.cos(time()/1000));
-    */
-    title.draw();
-    play.draw();
-    difficulty.draw();
-    visibility.draw();
-    music.draw();
-}
-
 
 /*
  * Enums
@@ -98,6 +77,215 @@ Object.freeze(Key);
 
 var ScrSz = {"w": 240, "h": 136};
 Object.freeze(ScrSz);
+
+/**
+ * Finite-State-Machine
+ */
+function State(name) {
+    this.name = name;
+}
+
+Object.assign(State.prototype, {
+    init: function() { },
+    onEnter: function() { },
+    onExit: function() { },
+    update: function(dt) { },
+    draw: function() { }
+});
+
+function MenuState() {
+    State.call(this, "menu");
+}
+
+MenuState.prototype = Object.create(State.prototype);
+MenuState.prototype.constructor = MenuState;
+
+Object.assign(MenuState.prototype, {
+    init: function() {
+        this.selection = 0;
+        this.menuListX = 120;
+        this.title = new Text("SATELLITE", new Vec2(20, 30), 4, 2);
+        this.playTxt = new Text("Play", new Vec2(this.menuListX, 60), 1, 1);
+        this.difficultyTxt = new Text("Difficulty", new Vec2(this.menuListX, 70), 1, 1);
+        this.visibilityTxt = new Text("Visibility", new Vec2(this.menuListX, 80), 1, 1);
+        this.musicTxt = new Text("Music", new Vec2(this.menuListX, 90), 1, 1);
+        this.exitTxt = new Text("Exit", new Vec2(this.menuListX, 100), 1, 1);
+        this.satellite = new Satellite(0, 0, new Vec2(50, 50), 0, 5.0);
+        this.enterPressedP = false;
+    },
+
+    onEnter: function() {
+        trace("Enter [S]MenuState");
+    },
+
+    onExit: function() {
+        trace("Exit [S]MenuState");
+    },
+
+    draw: function() {
+        this.update();
+
+        this.title.draw();
+
+        if (this.selection == 0) {
+
+            this.playTxt.draw(8);
+
+        } else {
+
+            this.playTxt.draw();
+
+        }
+
+        if (this.selection == 1) {
+
+            this.difficultyTxt.draw(8);
+
+        } else {
+
+            this.difficultyTxt.draw();
+        }
+
+        if (this.selection == 2) {
+
+            this.visibilityTxt.draw(8);
+
+        } else {
+
+            this.visibilityTxt.draw();
+
+        }
+
+        if (this.selection == 3) {
+
+            this.musicTxt.draw(8);
+
+        } else {
+
+            this.musicTxt.draw();
+        }
+
+        if (this.selection == 4) {
+
+            this.exitTxt.draw(8);
+
+        } else {
+
+            this.exitTxt.draw();
+
+        }
+
+        this.satellite.draw(this.enterPressedP);
+    },
+
+    update: function(dt) {
+        switch (this.selection) {
+        case 0:
+            this.satellite.pos = new Vec2(this.playTxt.pos.x - 24, this.playTxt.pos.y - 1);
+            break;
+        case 1:
+            this.satellite.pos = new Vec2(this.difficultyTxt.pos.x - 24, this.difficultyTxt.pos.y - 1);
+            break;
+        case 2:
+            this.satellite.pos = new Vec2(this.visibilityTxt.pos.x - 24, this.visibilityTxt.pos.y - 1);
+            break;
+        case 3:
+            this.satellite.pos = new Vec2(this.musicTxt.pos.x - 24, this.musicTxt.pos.y - 1);
+            break;
+        case 4:
+            this.satellite.pos = new Vec2(this.exitTxt.pos.x - 24, this.exitTxt.pos.y - 1);
+            break;
+        default:
+            break;
+        }
+    }
+});
+
+// TODO: onEnter, onExit, update
+
+function GameOverState() {
+    State.call(this, "gameover");
+}
+
+GameOverState.prototype = Object.create(State.prototype);
+GameOverState.prototype.constructor = GameOverState;
+// TODO: onEnter, onExit, update
+GameOverState.prototype.onEnter = function() {
+    trace("Enter [S]GameOverState");
+};
+GameOverState.prototype.onExit = function() { };
+GameOverState.prototype.update = function() { };
+GameOverState.prototype.draw = function() {};
+
+function PlayState() {
+    State.call(this, "play");
+}
+
+PlayState.prototype = Object.create(State.prototype);
+PlayState.prototype.constructor = PlayState;
+// TODO: onEnter, onExit, update
+PlayState.prototype.onEnter = function() { };
+PlayState.prototype.onExit = function() { };
+PlayState.prototype.update = function() { };
+PlayState.prototype.draw = function() {};
+
+
+function FSM() {
+    this.current = null;
+    this.states = [];
+}
+
+Object.assign(FSM.prototype, {
+    add: function(state) {
+        trace("Adding [S]" + state.name);
+        if (Utils.listHas(this.states, 'name', state.name)) {
+
+            trace("State with name: " + state.name + " already exists!");
+
+        } else {
+
+            this.states.push(state);
+            state.init();
+
+        }
+    },
+
+    remove: function(name) {
+        var s = this.states[name];
+        if (s != null) {
+            if (this.current === s) {
+                this.current.onExit(null);
+                this.current = null;
+            }
+            this.states.delete(name);
+        }
+    },
+
+    switchTo: function(name) {
+        var s = Utils.listFind(this.states, "name", name);
+        if (s !== null) {
+            if (this.current !== null) {
+                this.current.onExit();
+            }
+            s.onEnter();
+            this.current = s;
+            trace("Switch successfully [S] " + this.current.name);
+        }
+    },
+
+    update: function(dt) {
+        if (this.current !== null) {
+            this.current.update(dt);
+        }
+    },
+
+    draw: function() {
+        //trace("FSM drawing [S] " + this.current.name);
+        if (this.current !== null) {
+            this.current.draw();
+        }
+    }
+});
 
 /*
  * Timer
@@ -118,39 +306,51 @@ function Game() {
     ];
     this.satellite = new Satellite(0, 0, new Vec2(50, 50), 0, 5.0);
     this.planet = new Planet(new Vec2(80, 80), new Vec2(0, 0), true, 0, 0, 1, 10, 20);
+    this.enterReleased = false;
     //this.dt;
     this.volume = 2;
     this.score = 0;
     this.gravity = 1;
 
     this.fsm = new FSM();
+    /*
+    trace("Going to add");
     this.fsm.add(new GameOverState());
     this.fsm.add(new MenuState());
     this.fsm.add(new PlayState());
     this.fsm.switchTo("menu");
+    */
 
     this.timer = new Timer();
-    this.timer.init();
+    //this.timer.init();
 
     this.camera = new Camera();
-    this.camera.init();
+    //this.camera.init();
 
     this.renderer = new Renderer();
-    this.renderer.createLayer(0); // background
-    this.renderer.createLayer(1); // stars
-    this.renderer.createLayer(2); // planets
-    this.renderer.createLayer(3); // satellite
-    this.renderer.createLayer(4); // foreground
-    this.renderer.init();
+    //this.renderer.init();
+    //this.renderer.createLayer(0); // background
+    //this.renderer.createLayer(1); // stars
+    //this.renderer.createLayer(2); // planets
+    //this.renderer.createLayer(3); // satellite
+    //this.renderer.createLayer(4); // foreground
 
-    this.world = new World();
-    this.world.groups.create("planets");
-    this.world.groups.create("satellite");
-    this.world.groups.create("bbox");
-    this.world.groups.create("stars");
+    //this.world = new World();
+    //this.world.groups.create("planets");
+    //this.world.groups.create("satellite");
+    //this.world.groups.create("bbox");
+    //this.world.groups.create("stars");
 }
 
 Object.assign(Game.prototype, {
+    init: function() {
+        trace("Going to add");
+        this.fsm.add(new GameOverState());
+        this.fsm.add(new MenuState());
+        this.fsm.add(new PlayState());
+        this.fsm.switchTo("menu");
+    },
+
     showHud: function(score) {
         this.showDirBtns(216, 112);
         this.showFnBtns(0, 112);
@@ -204,12 +404,47 @@ Object.assign(Game.prototype, {
     },
 
     keyinput: function() {
-        if (key(Key.Up)) {
-            this.satellite.propulse(Dir.Up);
+        if (keyp(Key.Enter)) {
+            trace("Enter pressed");
+            if (this.fsm.current.name == "menu") {
+                // TODO: change selection color
+                //this.fsm.current.enterPressedP = true;
+                trace("Yes, it's menu");
+                switch (this.selection) {
+                case 0:
+                    break;
+                case 1:
+                    // difficulty
+                    break;
+                case 2:
+                    // visibility
+                    break;
+                case 3:
+                    // music
+                    break;
+                case 4:
+                    exit();
+                    break;
+                default:
+                    break;
+                }
+            }
         }
 
-        if (key(Key.Down)) {
-            this.satellite.propulse(Dir.Down);
+        if (keyp(Key.Up)) {
+            if (this.fsm.current.name == "menu")
+                this.fsm.current.selection = Utils.mod(this.fsm.current.selection - 1, 5);
+
+            if (this.fsm.current.name == "play")
+                this.satellite.propulse(Dir.Up);
+        }
+
+        if (keyp(Key.Down)) {
+            if (this.fsm.current.name == "menu")
+                this.fsm.current.selection = Utils.mod(this.fsm.current.selection + 1, 5);
+
+            if (this.fsm.current.name == "play")
+                this.satellite.propulse(Dir.Down);
         }
 
         if (key(Key.Left)) {
@@ -231,11 +466,11 @@ Object.assign(Game.prototype, {
 
     update: function() {
         this.keyinput();
-        this.timer.update();
+        //this.timer.update();
         this.fsm.draw();
-        this.space.draw();
-        this.satellite.draw();
-        this.planet.draw();
+        //this.space.draw();
+        //this.satellite.draw();
+        //this.planet.draw();
     }
 });
 
@@ -274,16 +509,27 @@ function Satellite(radius, mass, pos, rotation, battery) {
     this.pos = pos;
     this.rotation = rotation;
     this.battery = battery;
-    this.sprite = [6, 7, 8];
+    this.sprite = [6, 7, 8, 9, 10, 11];
 }
 
 Object.assign(Satellite.prototype, {
-    draw: function() {
-        trace("[Satellite] x: " + this.pos.x + " y: " + this.pos.y);
-        trace("[Satellite] rotation: " + this.rotation);
-        spr(this.sprite[0], this.pos.x - 8, this.pos.y, rotate=this.rotation);
-        spr(this.sprite[1], this.pos.x, this.pos.y, rotate=this.rotation);
-        spr(this.sprite[2], this.pos.x + 8, this.pos.y, rotate=this.rotation);
+    draw: function(dark) {
+        //trace("[Satellite] x: " + this.pos.x + " y: " + this.pos.y);
+        //trace("[Satellite] rotation: " + this.rotation);
+        if (!dark) {
+
+            spr(this.sprite[0], this.pos.x - 8, this.pos.y, rotate=this.rotation);
+            spr(this.sprite[1], this.pos.x, this.pos.y, rotate=this.rotation);
+            spr(this.sprite[2], this.pos.x + 8, this.pos.y, rotate=this.rotation);
+
+        } else {
+
+            spr(this.sprite[3], this.pos.x - 8, this.pos.y, rotate=this.rotation);
+            spr(this.sprite[4], this.pos.x, this.pos.y, rotate=this.rotation);
+            spr(this.sprite[5], this.pos.x + 8, this.pos.y, rotate=this.rotation);
+
+        }
+
         if (this.battery <= 1.0) {
             if (time() % 360 > 180)
                 print("WARNING: LOW ENERGY!", 64, 128, 6);
@@ -642,8 +888,11 @@ function Text(text, pos, scale, color) {
     this.color = color;
 }
 
-Text.prototype.draw = function() {
-    print(this.text, this.pos.x, this.pos.y, this.color, false, this.scale);
+Text.prototype.draw = function(color) {
+    if (color == null)
+        print(this.text, this.pos.x, this.pos.y, this.color, false, this.scale);
+    else
+        print(this.text, this.pos.x, this.pos.y, color, false, this.scale);
 };
 
 /*
@@ -805,145 +1054,35 @@ Object.assign(System.prototype, {
     },
 });
 
-/**
- * Finite-State-Machine
+/*
+ * Main loops
  */
-function State(name) {
-    this.name = name;
+var world = new World();
+
+var game = new Game();
+game.init();
+
+function TIC() {
+    cls(0);
+    game.update();
 }
 
-Object.assign(State.prototype, {
-    init: function() { },
-    onEnter: function(d) { },
-    onExit: function(d) { },
-    update: function(dt) { },
-    draw: function() { }
-});
+var title = new Text("SATELLITE", new Vec2(20, 30), 4, 2);
+var play = new Text("Play", new Vec2(120, 60), 1, 1);
+var difficulty = new Text("Difficulty", new Vec2(120, 70), 1, 1);
+var visibility = new Text("Visibility", new Vec2(120, 80), 1, 1);
+var music = new Text("Music", new Vec2(120, 90), 1, 1);
 
-function MenuState() {
-    State.call(this, "menu");
+function OVR() {
+    /*
+      game.showHud();
+
+      circb(50 + 40 * Math.sin(time()/1000), 50 + 40 * Math.cos(time()/1000), 20, 4);
+      spr(22, 47 + 40 * Math.sin(time()/1000), 48 + 40 * Math.cos(time()/1000));
+    */
+    //title.draw();
+    //play.draw();
+    //difficulty.draw();
+    //visibility.draw();
+    //music.draw();
 }
-
-MenuState.prototype = Object.create(State.prototype);
-
-MenuState.prototype.constructor = MenuState;
-
-MenuState.prototype.init = function() { };
-
-MenuState.prototype.onEnter = function(d) {
-    this.selection = 0;
-    this.title = new Text("SATELLITE", new Vec2(20, 30), 4, 2);
-    this.playTxt = new Text("Play", new Vec2(this.x, 60), 1, 1);
-    this.difficultyTxt = new Text("Difficulty", new Vec2(this.x, 70), 1, 1);
-    this.visibilityTxt = new Text("Visibility", new Vec2(this.x, 80), 1, 1);
-    this.musicTxt = new Text("Music", new Vec2(this.x, 90), 1, 1);
-    this.exitTxt = new Text("Exit", new Vec2(this.x, 100), 1, 1);
-};
-
-MenuState.prototype.onExit = function() {};
-
-MenuState.prototype.update = function(dt) {
-    if (keyp(Key.Enter)) {
-        switch (this.selection) {
-        case 0:
-            // enter play
-            break;
-        case 1:
-            // difficulty
-            break;
-        case 2:
-            // visibility
-            break;
-        case 3:
-            // music
-            break;
-        case 4:
-            exit();
-            break;
-        default:
-            break;
-        }
-    }
-
-    if (keyp(Key.Up)) {
-        this.selection = Utils.mod(this.selection - 1, 5);
-    } else if (keyp(Key.Down)) {
-        this.selection = Utils.mod(this.selection + 1, 5);
-    }
-};
-
-MenuState.prototype.draw = function() {
-};
-
-// TODO: onEnter, onExit, update
-
-function GameOverState() {
-    State.call(this, "gameover");
-}
-
-GameOverState.prototype = Object.create(State.prototype);
-GameOverState.prototype.constructor = GameOverState;
-
-// TODO: onEnter, onExit, update
-
-function PlayState() {
-    State.call(this, "play");
-}
-
-PlayState.prototype = Object.create(State.prototype);
-PlayState.prototype.constructor = PlayState;
-// TODO: onEnter, onExit, update
-function FSM() {
-    this.current = null;
-    this.states = [];
-}
-
-Object.assign(FSM.prototype, {
-    add: function(state) {
-        if (this.states.has(state.name)) {
-
-            trace("State with name: " + state.name + " already exists!");
-
-        } else {
-
-            this.states[state.name] = state;
-            state.init();
-
-        }
-    },
-
-    remove: function(name) {
-        var s = this.states[name];
-        if (s != null) {
-            if (this.current === s) {
-                this.current.onExit(null);
-                this.current = null;
-            }
-            this.states.delete(name);
-        }
-    },
-
-    switchTo: function(name) {
-        // amelioration
-        var s = this.states[name];
-        if (s !== null) {
-            if (this.current !== null) {
-                this.current.onExit();
-            }
-            s.onEnter();
-            this.current = s;
-        }
-    },
-
-    update: function(dt) {
-        if (this.current !== null) {
-            this.current.update(dt);
-        }
-    },
-
-    draw: function() {
-        if (this.current !== null) {
-            this.current.draw();
-        }
-    }
-});

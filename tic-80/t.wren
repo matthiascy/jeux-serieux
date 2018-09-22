@@ -1460,7 +1460,7 @@ class CometImage is Drawable {
 	construct new(r,c,l) {
 		super()
 		_r = r
-		_c = c
+		_c = cmT
 		layer = l
 		_tvert = [
 			Vector.new(-0.7,-0.7),
@@ -1479,50 +1479,50 @@ class CometImage is Drawable {
 			5,6,7,
 			5,7,1,
 			1,3,5
-		]
-
-		_tmpvec = Vector.new()
-		for (v in _tvert) {
-			Utils.random_point_in_unit_circle(_tmpvec).multiply(0.25)
-			v.add(_tmpvec)
+		]
+
+		_tmpvec = Vector.new()
+		for (v in _tvert) {
+			Utils.random_point_in_unit_circle(_tmpvec).multiply(0.25)
+			v.add(_tmpvec)
+		}
+		_av = Game.random.int(-60,60)
+
+	}
+
+	draw() {
+
+		if (_av.abs > 30) {
+			_av = _av * 0.999
 		}
-		_av = Game.random.int(-60,60)
 
-	}
-
-	draw() { 
-
-		if (_av.abs > 30) {
-			_av = _av * 0.999
-		}
-
-		for (v in _tvert) {
-			Utils.rotate(0,0, _av/60, v)
+		for (v in _tvert) {
+			Utils.rotate(0,0, _av/60, v)
 		}
 
 		var n = 0
-		for (i in 0...(_tind.count/3).floor) {
+		for (i in 0...(_tind.count/3).floor) {
 			n = i*3
 			TIC.tri(_tvert[_tind[n]].x*_r+x, _tvert[_tind[n]].y*_r+y, _tvert[_tind[n+1]].x*_r+x, _tvert[_tind[n+1]].y*_r+y,_tvert[_tind[n+2]].x*_r+x, _tvert[_tind[n+2]].y*_r+y, color)
-		}
-	}
-
-}
-
-
-class Position is Vector {
-
+		}
+	}
+
+}
+
+
+class Position is Vector {
+
 	construct new(x,y) {
 		super(x,y)
-	}
-
-}
-
+	}
+
+}
+
 class Velocity is Vector {
-
+
 	damping { _damp }
 	damping=(v) { _damp=v }
-
+
 	construct new(x,y, d) {
 		super(x,y)
 		_damp = d
