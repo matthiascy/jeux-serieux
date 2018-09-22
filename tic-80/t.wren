@@ -1494,274 +1494,272 @@ class CometImage is Drawable {
 
 		if (_av.abs > 30) {
 			_av = _av * 0.999
-		}
-
+		}
+
 		for (v in _tvert) {
 			Utils.rotate(0,0, _av/60, v)
-		}
-
-		var n = 0
+		}
+
+		var n = 0
 		for (i in 0...(_tind.count/3).floor) {
-			n = i*3
+			n = i*3
 			TIC.tri(_tvert[_tind[n]].x*_r+x, _tvert[_tind[n]].y*_r+y, _tvert[_tind[n+1]].x*_r+x, _tvert[_tind[n+1]].y*_r+y,_tvert[_tind[n+2]].x*_r+x, _tvert[_tind[n+2]].y*_r+y, color)
 		}
 	}
-
 }
 
 
 class Position is Vector {
 
-	construct new(x,y) {
-		super(x,y)
+	construct new(x,y) {
+		super(x,y)
 	}
 
 }
 
-class Velocity is Vector {
+class Velocity is Vector {
 
-	damping { _damp }
-	damping=(v) { _damp=v }
+	damping { _damp }
+	damping=(v) { _damp=v }
 
-	construct new(x,y, d) {
-		super(x,y)
-		_damp = d
-	}
-
-}
-
-
-// processors
-class DrawProcessor is Processor {
-
-	construct new() {
-		super()
-	}
-
-	onenabled() { 
-		_ln_comps = Components.get(Lines)
-		_draw_comps = Components.get(Drawable)
-		_star_comps = Components.get(Star)
-		_pos_comps = Components.get(Position)
-		_ps_comps = Components.get(ParticleSystem)
-		_cm_comps = Components.get(Comet)
-		_comets = Family.get("comets")
-		_planets = Family.get("planets")
-		_stars = Family.get("stars")
-		_particles = Family.get("particles")
-
-		_draw_added = Fn.new {|e|
-			var p = _pos_comps.get(e)
-			var d = _draw_comps.get(e)
-			var s = _star_comps.get(e)
-			if (s != null) {
-				d.x = (p.x - (Camera.x*s.paralax)).floor
-				d.y = (p.y - (Camera.y*s.paralax)).floor
-			} else {
-				d.x = (p.x - Camera.x).floor
-				d.y = (p.y - Camera.y).floor
-			}
-			d.init()
-
-		}
-
-		_cm_added = Fn.new {|e|
-			var p = _pos_comps.get(e)
-			var d = _draw_comps.get(e)
-			d.x = (p.x - Camera.x).floor
-			d.y = (p.y - Camera.y).floor
-			_ln_comps.get(e).init()
-			d.init()
-		}
-
-		_cm_removed = Fn.new {|e|
-			_ln_comps.get(e).destroy()
-			_draw_comps.get(e).destroy()
-		}
-
-		_ps_added = Fn.new {|e|
-			var d = _ps_comps.get(e)
-			d.init()
-		}
-
-		_draw_removed = Fn.new {|e|
-			_draw_comps.get(e).destroy()
-		}
-
-		_planets.onadded.add(_draw_added)
-		_planets.onremoved.add(_draw_removed)
-		_comets.onadded.add(_cm_added)
-		_comets.onremoved.add(_cm_removed)
-		_stars.onadded.add(_draw_added)
-		_stars.onremoved.add(_draw_removed)
-		_particles.onadded.add(_ps_added)
-	}
-
-	ondisabled() { 
-		_planets.onadded.remove(_draw_added)
-		_planets.onremoved.remove(_draw_removed)
-		_comets.onadded.remove(_cm_added)
-		_comets.onremoved.remove(_cm_removed)
-		_stars.onadded.remove(_draw_added)
-		_stars.onremoved.remove(_draw_removed)
-		_particles.onadded.remove(_ps_added)
-	}
-
-	set_dr_pos(e) { 
-		var p = _pos_comps.get(e)
-		var d = _draw_comps.get(e)
-		d.x = (p.x - Camera.x).floor
-		d.y = (p.y - Camera.y).floor
-	}
-
-	update(dt) { 
-		var d
-		var p
-		var s
-
-		for (e in _comets) {
-			set_dr_pos(e)
-		}
-
-		for (e in _planets) {
-			set_dr_pos(e)
-		}
-		for (e in _stars) {
-			p = _pos_comps.get(e)
-			d = _draw_comps.get(e)
-			s = _star_comps.get(e)
-			d.x = (p.x - (Camera.x*s.paralax)).floor
-			d.y = (p.y - (Camera.y*s.paralax)).floor
-		}
-		
-	}
-	
-}
-
-class CometProcessor is Processor {
-
-	construct new() {
-		super()
-	}
-
-	onenabled() { 
-		_comet_comps = Components.get(Comet)
-		_ln_comps = Components.get(Lines)
-		_b_comps = Components.get(Bounds)
-		_planet_comps = Components.get(Planet)
-		_dr_comps = Components.get(Drawable)
-		_pos_comps = Components.get(Position)
-		_vel_comps = Components.get(Velocity)
-		_ps_comps = Components.get(ParticleSystem)
-		_comets = Family.get("comets")
-		_planets = Family.get("planets")
-		_nsup = 1024
-		_btmp = Bounds.new(0,0,0,0,null)
-		_vtmp = Vector.new(0,0)
-		_ptmp = Vector.new(0,0)
-		_cont = []
-
-	}
-
-	ondisabled() { 
-		_planet_comps = null
-		_comet_comps = null
-		_pos_comps = null
-		_vel_comps = null
-		_planets = null
-		_comets = null
-	}
-
-	hit(e, burst) { 
-		Camera.shake(6)
-
-		var cm = _comet_comps.get(e)
-		var ps = _ps_comps.get(e)
-		var dr = _dr_comps.get(e)
-		var b = _b_comps.get(e)
-		cm.radius = cm.radius -1
-		if (cm.radius <= 0) {
-			cm.radius = 1 // dead
-			burst = true
-			_comet_comps.remove(e)
-			ps.stop()
-			TIC.sfx(20,20,-1,1,15)
-			TIC.sfx(16,20,-1,0,15)
-			Timer.schedule(1,Fn.new {
-				Game.fsm.set("gameover")
-			})
-		} else {
-			TIC.sfx(19,20,-1,1,15)
-		}
-		b.r = cm.radius
-		ps.emitters[0].modules[0].radius = cm.radius
-		ps.emitters[2].modules[0].radius = cm.radius+2
-		dr.radius = cm.radius
-		dr.angvel = Game.random.int(-360,360)
-		if (burst) {
-			ps.emitters[1].emit()
-		}
-		Game.remove_score(4)
-		cm.hitcd = 1
-		cm.update_mass()
-	}
-
-	grow(e, burst) { 
-		var cm = _comet_comps.get(e)
-		var ps = _ps_comps.get(e)
-		var dr = _dr_comps.get(e)
-		var b = _b_comps.get(e)
-		cm.radius = cm.radius + 0.5
-		if (cm.radius > 28) {
-			cm.radius = 28
-		}
-		b.r = cm.radius
-		ps.emitters[0].modules[0].radius = cm.radius
-		ps.emitters[2].modules[0].radius = cm.radius+2
-		dr.radius = cm.radius
-		Game.add_score(8)
-		TIC.sfx(18,30,-1,1,15)
-
-		cm.update_mass()
-	}
-
-	update(dt) { 
-		var vel
-		var pos
-		var pos_b
-		var pl
-		var cm
-		var dr
-		var dist
-		var ps
-		var b
-		var ln
-		var contacts
-		Game.speed = Maths.lerp(Game.chances[0][8], Game.chances[1][8], Game.prog) * Game.gravity
-
-		for (e in _comets) {
-			cm = _comet_comps.get(e)
-			pos = _pos_comps.get(e)
-			vel = _vel_comps.get(e)
-			ps = _ps_comps.get(e)
-			b = _b_comps.get(e)
-			dr = _dr_comps.get(e)
-			ln = _ln_comps.get(e)
-
-			contacts = b.contacts
-
-			vel.x = Game.speed
-
-			if (TIC.btn(4)) {
-				cm.polarity = -1
-				TIC.sfx(1,24,8,0,2)
-			} else {
-				cm.polarity = 1
-			}
-
-			Collision.get_contacts(b,contacts)
-
-			if (cm.hitcd > 0) {
+	construct new(x,y, d) {
+		super(x,y)
+		_damp = d
+	}
+
+}
+
+
+// processors
+class DrawProcessor is Processor {
+
+	construct new() {
+		super()
+	}
+
+	onenabled() {
+		_ln_comps = Components.get(Lines)
+		_draw_comps = Components.get(Drawable)
+		_star_comps = Components.get(Star)
+		_pos_comps = Components.get(Position)
+		_ps_comps = Components.get(ParticleSystem)
+		_cm_comps = Components.get(Comet)
+		_comets = Family.get("comets")
+		_planets = Family.get("planets")
+		_stars = Family.get("stars")
+		_particles = Family.get("particles")
+
+		_draw_added = Fn.new {|e|
+			var p = _pos_comps.get(e)
+			var d = _draw_comps.get(e)
+			var s = _star_comps.get(e)
+			if (s != null) {
+				d.x = (p.x - (Camera.x*s.paralax)).floor
+				d.y = (p.y - (Camera.y*s.paralax)).floor
+			} else {
+				d.x = (p.x - Camera.x).floor
+				d.y = (p.y - Camera.y).floor
+			}
+			d.init()
+
+		}
+
+		_cm_added = Fn.new {|e|
+			var p = _pos_comps.get(e)
+			var d = _draw_comps.get(e)
+			d.x = (p.x - Camera.x).floor
+			d.y = (p.y - Camera.y).floor
+			_ln_comps.get(e).init()
+			d.init()
+		}
+
+		_cm_removed = Fn.new {|e|
+			_ln_comps.get(e).destroy()
+			_draw_comps.get(e).destroy()
+		}
+
+		_ps_added = Fn.new {|e|
+			var d = _ps_comps.get(e)
+			d.init()
+		}
+
+		_draw_removed = Fn.new {|e|
+			_draw_comps.get(e).destroy()
+		}
+
+		_planets.onadded.add(_draw_added)
+		_planets.onremoved.add(_draw_removed)
+		_comets.onadded.add(_cm_added)
+		_comets.onremoved.add(_cm_removed)
+		_stars.onadded.add(_draw_added)
+		_stars.onremoved.add(_draw_removed)
+		_particles.onadded.add(_ps_added)
+	}
+
+	ondisabled() {
+		_planets.onadded.remove(_draw_added)
+		_planets.onremoved.remove(_draw_removed)
+		_comets.onadded.remove(_cm_added)
+		_comets.onremoved.remove(_cm_removed)
+		_stars.onadded.remove(_draw_added)
+		_stars.onremoved.remove(_draw_removed)
+		_particles.onadded.remove(_ps_added)
+	}
+
+	set_dr_pos(e) {
+		var p = _pos_comps.get(e)
+		var d = _draw_comps.get(e)
+		d.x = (p.x - Camera.x).floor
+		d.y = (p.y - Camera.y).floor
+	}
+
+	update(dt) {
+		var d
+		var p
+		var s
+
+		for (e in _comets) {
+			set_dr_pos(e)
+		}
+
+		for (e in _planets) {
+			set_dr_pos(e)
+		}
+		for (e in _stars) {
+			p = _pos_comps.get(e)
+			d = _draw_comps.get(e)
+			s = _star_comps.get(e)
+			d.x = (p.x - (Camera.x*s.paralax)).floor
+			d.y = (p.y - (Camera.y*s.paralax)).floor
+		}
+
+	}
+
+}
+
+class CometProcessor is Processor {
+
+	construct new() {
+		super()
+	}
+
+	onenabled() {
+		_comet_comps = Components.get(Comet)
+		_ln_comps = Components.get(Lines)
+		_b_comps = Components.get(Bounds)
+		_planet_comps = Components.get(Planet)
+		_dr_comps = Components.get(Drawable)
+		_pos_comps = Components.get(Position)
+		_vel_comps = Components.get(Velocity)
+		_ps_comps = Components.get(ParticleSystem)
+		_comets = Family.get("comets")
+		_planets = Family.get("planets")
+		_nsup = 1024
+		_btmp = Bounds.new(0,0,0,0,null)
+		_vtmp = Vector.new(0,0)
+		_ptmp = Vector.new(0,0)
+		_cont = []
+	}
+
+	ondisabled() {
+		_planet_comps = null
+		_comet_comps = null
+		_pos_comps = null
+		_vel_comps = null
+		_planets = null
+		_comets = null
+	}
+
+	hit(e, burst) {
+		Camera.shake(6)
+
+		var cm = _comet_comps.get(e)
+		var ps = _ps_comps.get(e)
+		var dr = _dr_comps.get(e)
+		var b = _b_comps.get(e)
+		cm.radius = cm.radius -1
+		if (cm.radius <= 0) {
+			cm.radius = 1 // dead
+			burst = true
+			_comet_comps.remove(e)
+			ps.stop()
+			TIC.sfx(20,20,-1,1,15)
+			TIC.sfx(16,20,-1,0,15)
+			Timer.schedule(1,Fn.new {
+				Game.fsm.set("gameover")
+			})
+		} else {
+			TIC.sfx(19,20,-1,1,15)
+		}
+		b.r = cm.radius
+		ps.emitters[0].modules[0].radius = cm.radius
+		ps.emitters[2].modules[0].radius = cm.radius+2
+		dr.radius = cm.radius
+		dr.angvel = Game.random.int(-360,360)
+		if (burst) {
+			ps.emitters[1].emit()
+		}
+		Game.remove_score(4)
+		cm.hitcd = 1
+		cm.update_mass()
+	}
+
+	grow(e, burst) {
+		var cm = _comet_comps.get(e)
+		var ps = _ps_comps.get(e)
+		var dr = _dr_comps.get(e)
+		var b = _b_comps.get(e)
+		cm.radius = cm.radius + 0.5
+		if (cm.radius > 28) {
+			cm.radius = 28
+		}
+		b.r = cm.radius
+		ps.emitters[0].modules[0].radius = cm.radius
+		ps.emitters[2].modules[0].radius = cm.radius+2
+		dr.radius = cm.radius
+		Game.add_score(8)
+		TIC.sfx(18,30,-1,1,15)
+
+		cm.update_mass()
+	}
+
+	update(dt) {
+		var vel
+		var pos
+		var pos_b
+		var pl
+		var cm
+		var dr
+		var dist
+		var ps
+		var b
+		var ln
+		var contacts
+		Game.speed = Maths.lerp(Game.chances[0][8], Game.chances[1][8], Game.prog) * Game.gravity
+
+		for (e in _comets) {
+			cm = _comet_comps.get(e)
+			pos = _pos_comps.get(e)
+			vel = _vel_comps.get(e)
+			ps = _ps_comps.get(e)
+			b = _b_comps.get(e)
+			dr = _dr_comps.get(e)
+			ln = _ln_comps.get(e)
+
+			contacts = b.contacts
+
+			vel.x = Game.speed
+
+			if (TIC.btn(4)) {
+				cm.polarity = -1
+				TIC.sfx(1,24,8,0,2)
+			} else {
+				cm.polarity = 1
+			}
+
+			Collision.get_contacts(b,contacts)
+
+			if (cm.hitcd > 0) {
 				cm.hitcd = cm.hitcd - dt
 			} else {
 				cm.hitcd = 0
